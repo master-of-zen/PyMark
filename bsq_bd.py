@@ -4,6 +4,7 @@ import sys
 import math
 import numpy as np
 import argparse
+import re
 from pathlib import Path
 import subprocess
 from subprocess import PIPE, STDOUT
@@ -112,10 +113,61 @@ def read_json_file(pth: Path) -> Dict:
         return json.load(fl)
 
 
+def get_bitrate(fl: Path):
+    cmd = [
+        "ffmpeg",
+        "-hide_banner",
+        "-i",
+        fl,
+        "-c",
+        "copy",
+        "-f",
+        "null",
+        "-",
+    ]
+
+    pipe = subprocess.Popen(cmd, stdout=PIPE, stderr=STDOUT)
+
+    encoder_history = []
+
+    while True:
+        line = pipe.stdout.readline().strip()
+
+        if len(line) == 0 and pipe.poll() is not None:
+            break
+
+        if len(line) == 0:
+            continue
+
+        if line:
+            encoder_history.append(line.decode())
+
+    if pipe.returncode != 0 and pipe.returncode != -2:
+        tb = sys.exc_info()[2]
+        print("\n".join(encoder_history))
+        raise RuntimeError("Error in getting bitrate").with_traceback(tb)
+
+    # Get size
+    match = re.findall(r"video:([0-9]+)", "\n".join(encoder_history))
+    size = int(match[-1])
+
+    # Get time
+    match = re.findall(
+        r"time=([0-9+]+):([0-9+]+):([0-9+]+.[0-9+]+)", "\n".join(encoder_history)
+    )
+    h, m, s = match[0]
+    bitrate = round(size / (int(h) * 3600 + int(m) * 60 + float(s)), 2)
+    return bitrate
+
+
 def read_metrics(js: Dict) -> Dict:
+    # reads metrics from json and gets bitrate of probe file
     new = {}
     for key in ("VMAF score", "PSNR score", "SSIM score", "MS-SSIM score"):
         new[key.split()[0]] = round(js.pop(key), 4)
+
+    new["BITRATE"] = js.pop("BITRATE")
+
     return new
 
 
@@ -160,7 +212,10 @@ def calculate_metrics(source: Path, probe: Path):
         "-i",
         probe,
         "-filter_complex",
-        f"[0:v]setpts=PTS-STARTPTS[reference];[1:v]setpts=PTS-STARTPTS[distorted];[distorted][reference]libvmaf=psnr=1:ssim=1:ms_ssim=1:log_path={fl.as_posix()}:log_fmt=json",
+        f"[0:v]setpts=PTS-STARTPTS[reference];\
+          [1:v]setpts=PTS-STARTPTS[distorted];\
+          [distorted][reference]\
+          libvmaf=psnr=1:ssim=1:ms_ssim=1:log_path={fl.as_posix()}:log_fmt=json",
         "-f",
         "null",
         "-",
@@ -173,10 +228,24 @@ def calculate_metrics(source: Path, probe: Path):
     return fl
 
 
+def bench_routine(source, command, probe):
+    pipe = make_pipe(source, command)
+    run_encode(pipe)
+    fl = calculate_metrics(source, probe)
+    js = read_json_file(fl)
+    # add bitrate
+    bitrate = get_bitrate(probe)
+    js["BITRATE"] = bitrate
+    js = read_metrics(js)
+    return js
+
+
 def benchmark(source: Path, encoder: list):
 
+    assert isinstance(source, Path)
     # by https://tools.ietf.org/id/draft-ietf-netvc-testing-08.html#rfc.section.4.3
     libaom_q = (20, 32, 43, 55)
+    # It makes sense
     hevc_q = (15, 20, 25, 30, 35)
 
     results = dict()
@@ -184,7 +253,7 @@ def benchmark(source: Path, encoder: list):
     if "aom" in encoder:
         results["aom"] = dict()
         for q in libaom_q:
-            probe = f"{q}_{source}"
+            probe = f"{q}_{source.with_suffix('.ivf')}"
             command = [
                 "aomenc",
                 "--passes=1",
@@ -198,11 +267,7 @@ def benchmark(source: Path, encoder: list):
                 "-",
             ]
             print(f":: Encoding aom {q}")
-            pipe = make_pipe(source, command)
-            run_encode(pipe)
-            fl = calculate_metrics(source, probe)
-            js = read_json_file(fl)
-            js = read_metrics(js)
+            js = bench_routine(source, command, probe)
             results["aom"][q] = dict(js)
             with open("data.json", "w") as outfile:
 
@@ -211,7 +276,7 @@ def benchmark(source: Path, encoder: list):
     if "x265" in encoder:
         results["x265"] = dict()
         for q in hevc_q:
-            probe = f"{q}_{source}"
+            probe = f"{q}_{source.with_suffix('.ivf')}"
             command = [
                 "x265",
                 "--log-level",
@@ -227,11 +292,7 @@ def benchmark(source: Path, encoder: list):
                 "-",
             ]
             print(f":: Encoding x265 {q}")
-            pipe = make_pipe(source, command)
-            run_encode(pipe)
-            fl = calculate_metrics(source, probe)
-            js = read_json_file(fl)
-            js = read_metrics(js)
+            js = bench_routine(source, command, probe)
             results["x265"][q] = dict(js)
             with open("data.json", "w") as outfile:
 
@@ -273,7 +334,7 @@ if __name__ == "__main__":
         type=str,
         help="What to do",
     )
-    main_group.add_argument("--input", "-i", required=True, type=Path)
+    main_group.add_argument("--input", "-i", nargs="+", required=True, type=Path)
     main_group.add_argument("--encoder", "-e", nargs="+", required=True, type=str)
 
     parsed = vars(parser.parse_args())
@@ -281,4 +342,7 @@ if __name__ == "__main__":
         parser.print_help()
         sys.exit()
 
-    benchmark(parsed["input"], parsed["encoder"])
+    if "benchmark" in parsed["function"]:
+        benchmark(parsed["input"][0], parsed["encoder"])
+    elif "plot":
+        pass
