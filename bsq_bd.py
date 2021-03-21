@@ -152,21 +152,23 @@ def calculate_metrics(source: Path, probe: Path):
         "-loglevel",
         "error",
         "-r",
-        "60",
+        "24",
         "-i",
         source.as_posix(),
         "-r",
-        "60",
+        "24",
         "-i",
         probe,
         "-filter_complex",
-        f"libvmaf=psnr=1:ssim=1:ms_ssim=1:log_path={fl.as_posix()}:log_fmt=json",
+        f"[0:v]setpts=PTS-STARTPTS[reference];[1:v]setpts=PTS-STARTPTS[distorted];[distorted][reference]libvmaf=psnr=1:ssim=1:ms_ssim=1:log_path={fl.as_posix()}:log_fmt=json",
         "-f",
         "null",
         "-",
     ]
 
-    subprocess.Popen(cmd).wait()
+    p = subprocess.Popen(cmd, stdout=PIPE, stderr=STDOUT)
+
+    run_encode(p)
 
     return fl
 
