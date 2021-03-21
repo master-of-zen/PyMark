@@ -115,7 +115,7 @@ def read_json_file(pth: Path) -> Dict:
 def read_metrics(js: Dict) -> Dict:
     new = {}
     for key in ("VMAF score", "PSNR score", "SSIM score", "MS-SSIM score"):
-        new[key.split()[0]] = js.pop(key)
+        new[key.split()[0]] = round(js.pop(key), 4)
     return new
 
 
@@ -144,7 +144,7 @@ def make_pipe(source: Path, encoder_command: List, bit_depth=8):
 
 
 def calculate_metrics(source: Path, probe: Path):
-    fl = Path(f"{source}_{probe}.json")
+    fl = Path(f"{probe}.json")
     cmd = [
         "ffmpeg",
         "-nostdin",
@@ -177,7 +177,7 @@ def benchmark(source: Path, encoder: str):
     libaom_q = (20, 32, 43, 55)
     hevc_q = (15, 20, 25, 30, 35)
 
-    results = {}
+    results = {"aom": {}}
 
     if encoder == "aom":
 
@@ -201,8 +201,9 @@ def benchmark(source: Path, encoder: str):
             fl = calculate_metrics(source, probe)
             js = read_json_file(fl)
             js = read_metrics(js)
-            results["aom"] = {int(q): js}
+            results["aom"][q] = dict(js)
             with open("data.json", "w") as outfile:
+
                 json.dump(results, outfile)
 
 
