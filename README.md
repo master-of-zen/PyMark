@@ -1,3 +1,3 @@
 # PyMark
 Simple benchmarker
-BSQ-rate and BD-rate 
+Calculates BSQ-rate and BD-rate 
