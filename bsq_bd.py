@@ -173,16 +173,16 @@ def calculate_metrics(source: Path, probe: Path):
     return fl
 
 
-def benchmark(source: Path, encoder: str):
+def benchmark(source: Path, encoder: list):
 
     # by https://tools.ietf.org/id/draft-ietf-netvc-testing-08.html#rfc.section.4.3
     libaom_q = (20, 32, 43, 55)
     hevc_q = (15, 20, 25, 30, 35)
 
-    results = {"aom": {}}
+    results = dict()
 
-    if encoder == "aom":
-
+    if "aom" in encoder:
+        results["aom"] = dict()
         for q in libaom_q:
             probe = f"{q}_{source}"
             command = [
@@ -204,6 +204,35 @@ def benchmark(source: Path, encoder: str):
             js = read_json_file(fl)
             js = read_metrics(js)
             results["aom"][q] = dict(js)
+            with open("data.json", "w") as outfile:
+
+                json.dump(results, outfile)
+
+    if "x265" in encoder:
+        results["x265"] = dict()
+        for q in hevc_q:
+            probe = f"{q}_{source}"
+            command = [
+                "x265",
+                "--log-level",
+                "0",
+                "--no-progress",
+                "--y4m",
+                "--preset",
+                "fast",
+                "--crf",
+                f"{q}",
+                "-o",
+                probe,
+                "-",
+            ]
+            print(f":: Encoding x265 {q}")
+            pipe = make_pipe(source, command)
+            run_encode(pipe)
+            fl = calculate_metrics(source, probe)
+            js = read_json_file(fl)
+            js = read_metrics(js)
+            results["x265"][q] = dict(js)
             with open("data.json", "w") as outfile:
 
                 json.dump(results, outfile)
@@ -245,7 +274,7 @@ if __name__ == "__main__":
         help="What to do",
     )
     main_group.add_argument("--input", "-i", required=True, type=Path)
-    main_group.add_argument("--encoder", "-e", required=True, type=str)
+    main_group.add_argument("--encoder", "-e", nargs="+", required=True, type=str)
 
     parsed = vars(parser.parse_args())
     if not parsed["input"]:
