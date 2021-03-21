@@ -335,7 +335,7 @@ if __name__ == "__main__":
         help="What to do",
     )
     main_group.add_argument("--input", "-i", nargs="+", required=True, type=Path)
-    main_group.add_argument("--encoder", "-e", nargs="+", required=True, type=str)
+    main_group.add_argument("--encoder", "-e", nargs="+", type=str)
 
     parsed = vars(parser.parse_args())
     if not parsed["input"]:
@@ -343,6 +343,12 @@ if __name__ == "__main__":
         sys.exit()
 
     if "benchmark" in parsed["function"]:
-        benchmark(parsed["input"][0], parsed["encoder"])
+        enc = parsed["encoder"]
+
+        if not enc:
+            print("No encoder selected")
+            sys.exit()
+
+        benchmark(parsed["input"][0], enc)
     elif "plot":
         pass
