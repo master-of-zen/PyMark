@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+# mkv files and json
+*.mkv
+*.json
+
 # Distribution / packaging
 .Python
 build/
