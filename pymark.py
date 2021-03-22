@@ -538,14 +538,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     main_group = parser.add_argument_group("Functions")
-    main_group.add_argument(
-        "--function",
-        "-f",
-        nargs="+",
-        default="benchmark",
-        type=str,
-        help="What to do",
-    )
     main_group.add_argument("--input", "-i", nargs="+", required=True, type=Path)
     main_group.add_argument("--encoder", "-e", nargs="+", type=str)
     main_group.add_argument("--metric", "-m", nargs="+", type=str)
@@ -557,21 +549,7 @@ if __name__ == "__main__":
         parser.print_help()
         sys.exit()
 
-    if "benchmark" in parsed["function"]:
-        enc = parsed["encoder"]
-
-        if not Path(parsed["input"][0]).exists():
-            print("No input file/Can't reach")
-            print(Path(parsed["input"][0]))
-            sys.exit()
-
-        if not enc:
-            print("No encoder selected")
-            sys.exit()
-
-        benchmark(parsed["input"][0], enc)
-
-    elif "process" in parsed["function"]:
+    if Path(parsed["input"][0]).suffix == ".json":
 
         plot = parsed["plot"]
 
@@ -592,3 +570,17 @@ if __name__ == "__main__":
         with open(parsed["input"][0]) as f:
             data = json.load(f)
             data_processing(data, metrics, rates, plot)
+
+    else:
+        enc = parsed["encoder"]
+
+        if not Path(parsed["input"][0]).exists():
+            print("No input file/Can't reach")
+            print(Path(parsed["input"][0]))
+            sys.exit()
+
+        if not enc:
+            print("No encoder selected")
+            sys.exit()
+
+        benchmark(parsed["input"][0], enc)
