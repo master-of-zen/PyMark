@@ -14,7 +14,7 @@ from typing import List, Dict
 from collections import deque
 import json
 
-colors = ["b", "g", "r", "c", "m", "y"]
+colors = ["b", "r", "g", "c", "m", "y"]
 
 
 def bsq_rate():
@@ -294,6 +294,7 @@ def get_bd_rate(data, metric):
 
 
 def plot_range(data, metric, encoder):
+    color = colors.pop(0)
     scores = sorted([y[f"{metric}"] for x, y in data.items()])
     rate = sorted([y["BITRATE"] for x, y in data.items()])
 
@@ -305,13 +306,8 @@ def plot_range(data, metric, encoder):
     dif = int(max(x) - min(x))
     f = interpolate.interp1d(x, y, kind="slinear")
     xnew = np.linspace(xmin, xmax, dif)
-    plt.plot(
-        xnew,
-        f(xnew),
-        label=f"{encoder}",
-        linewidth=3,
-    )
-    plt.plot(x, y, marker=".", markersize=15)
+    plt.plot(xnew, f(xnew), label=f"{encoder}", linewidth=3, color=color)
+    plt.plot(x, y, marker=".", markersize=15, color=color)
 
 
 def data_processing(data, metrics):
