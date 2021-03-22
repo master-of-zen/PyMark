@@ -19,6 +19,13 @@ from numpy import trapz
 colors = ["b", "r", "g", "c", "m", "y"]
 
 
+def set_plt_fluff():
+    plt.figure(figsize=(42, 24), dpi=80, facecolor="w", edgecolor="k")
+    plt.tight_layout()
+    plt.subplots_adjust(left=0.045, right=0.99, top=0.965, bottom=0.065)
+    plt.margins(0)
+
+
 def bsq_rate(
     rate1,
     scores1,
@@ -36,8 +43,7 @@ def bsq_rate(
     dif = int(x_max - x_min)
 
     # First
-    plt.figure(figsize=(42, 24), dpi=80, facecolor="w", edgecolor="k")
-    plt.tight_layout()
+    set_plt_fluff()
     f = interpolate.interp1d(scores1, rate1, kind="linear")
     xnew = np.linspace(x_min, x_max, dif)
     plt.plot(
@@ -57,7 +63,7 @@ def bsq_rate(
         linewidth=3,
         color=color,
     )
-    plt.subplots_adjust(left=0.045, right=0.99, top=0.965, bottom=0.065)
+
     plt.show()
 
 
@@ -390,8 +396,7 @@ def plot(data: Dict, metrics):
     x265 = data["x265"]
 
     for metric in metrics:
-        plt.figure(figsize=(42, 24), dpi=80, facecolor="w", edgecolor="k")
-
+        set_plt_fluff()
         # Plot
         bitrates = [int(y["BITRATE"]) for x, y in aom.items()] + [
             int(y["BITRATE"]) for x, y in x265.items()
@@ -446,12 +451,9 @@ def plot(data: Dict, metrics):
             high_ylim = np.percentile(high_ylim, 90)
 
         plt.ylim((low_ylim, high_ylim))
-        plt.margins(0)
 
         plot_range(aom, metric, "aom")
         plot_range(x265, metric, "x265")
-
-        plt.subplots_adjust(left=0.045, right=0.99, top=0.965, bottom=0.065)
 
         plt.show()
 
