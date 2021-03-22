@@ -196,7 +196,11 @@ def get_bitrate(fl: Path):
 def read_metrics(js: Dict) -> Dict:
     # reads metrics from json and gets bitrate of probe file
     new = {}
-    for key in ("VMAF score", "PSNR score", "SSIM score", "MS-SSIM score"):
+    for key in (
+        "VMAF score",
+        "PSNR score",
+        "SSIM score",
+    ):
         new[key.split()[0]] = round(js.pop(key), 4)
 
     new["BITRATE"] = js.pop("BITRATE")
