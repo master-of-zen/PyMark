@@ -51,10 +51,7 @@ def bsq_rate(
     xnew2 = np.linspace(x_min, x_max, dif)
 
     area1 = round(trapz(f1(xnew1), dx=5), 3)
-    print("area 1 = ", area1)
-
     area2 = round(trapz(f2(xnew2), dx=5), 3)
-    print("area 2 = ", area2)
 
     # bsq_rate
     bsqrate = round(area1 / area2, 3)
@@ -319,7 +316,7 @@ def benchmark(source: Path, encoder: list):
                 "--no-progress",
                 "--y4m",
                 "--preset",
-                "fast",
+                "placebo",
                 "--crf",
                 f"{q}",
                 "-o",
