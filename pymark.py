@@ -270,91 +270,119 @@ def benchmark(source: Path, encoder: list):
                 json.dump(results, outfile)
 
 
-def print_metrics():
-    # Vmaf
-    vmaf0 = [(x[4], round(x[5], 3)) for x in data if x[2] == i]
-    vmaf1 = [(x[4], round(x[5], 3)) for x in data if x[2] == ii]
+def get_bd_rate(data, metric):
+    """Assuming aom/x265 codecs"""
+    aom = data["aom"]
+    x265 = data["x265"]
 
-    # PSNR
-    psnr0 = [(x[4], x[6], 3) for x in data if x[2] == i]
-    psnr1 = [(x[4], x[6], 3) for x in data if x[2] == ii]
+    scores1 = sorted([y[f"{metric}"] for x, y in aom.items()])
+    scores2 = sorted([y[f"{metric}"] for x, y in x265.items()])
 
-    # SSIM
-    ssim0 = [(x[4], x[7]) for x in data if x[2] == i]
-    ssim1 = [(x[4], x[7]) for x in data if x[2] == ii]
+    rate1 = sorted([y["BITRATE"] for x, y in aom.items()])
+    rate2 = sorted([y["BITRATE"] for x, y in x265.items()])
 
-    # MS-SSIM
-    mssim0 = [(x[4], x[8]) for x in data if x[2] == i]
-    mssim1 = [(x[4], x[8]) for x in data if x[2] == ii]
-
-    print("Vmaf BD rate:", bdrate(vmaf1, vmaf0))
-    print("PSNR BD rate:", bdrate(psnr1, psnr0))
-    print("SSIM BD rate:", bdrate(ssim1, ssim0))
-    print("MS-SSIM BD rate:", bdrate(mssim1, mssim0))
+    return bdrate(rate1, scores1, rate2, scores2)
 
 
-def plot_range(data, encoder, m_place):
-    dt = [x for x in data if x[2] == cpu]
-    x = sorted([round(x[4]) for x in dt])
-    y = sorted([x[m_place] for x in dt])
-    time = sum([x[1] for x in dt]) / len(dt)
+def plot_range(data, metric, encoder):
+    scores = sorted([y[f"{metric}"] for x, y in data.items()])
+    rate = sorted([y["BITRATE"] for x, y in data.items()])
+
+    print(scores)
+    print(rate)
+
+    x = sorted(scores)
+    y = sorted(rate)
+
+    xmin = int(math.ceil(min(x)))
+    xmax = int(max(x))
+    dif = int(max(x) - min(x))
     f = interpolate.interp1d(x, y, kind="linear")
-    xnew = np.linspace(min(x), max(x), max(x) - min(x))
-    plt.plot(xnew, f(xnew), label=f"{encoder} {cpu}", linewidth=3)
+    xnew = np.linspace(xmin, xmax, dif)
+    plt.plot(xnew, f(xnew), label=f"{encoder}", linewidth=3)
+    print("we are here")
 
 
-def plot(data: Dict, codecs: List):
+def data_processing(data, metrics):
+    for metric in metrics:
+        bd = get_bd_rate(data, metric)
+        print(f"{metric} BD rate:", bd)
 
-    for metric, place in [("VMAF", 5), ("PSNR", 6), ("SSIM", 7)]:
+    plot(data, metrics)
 
-        plot_range(aom_data, "Blues", "Aomenc", place)
-        plot_range(vvc_data, "Reds", "VVC", place)
+
+def plot(data: Dict, metrics):
+    codecs = ["aom", "x265"]
+    aom = data["aom"]
+    x265 = data["x265"]
+
+    for metric in metrics:
+        plt.figure(figsize=(42, 24), dpi=80, facecolor="w", edgecolor="k")
+
         # Plot
+        bitrates = [int(y["BITRATE"]) for x, y in aom.items()] + [
+            int(y["BITRATE"]) for x, y in x265.items()
+        ]
+        print(bitrates)
+        max_bitrate = max(bitrates)
 
         plt.xticks(
-            [x for x in range(0, 40000, 100)],
-            [int(x) for x in range(0, 40000, 100)],
+            [x for x in range(0, max_bitrate + 100, 100)],
+            [int(x) for x in range(0, max_bitrate + 100, 100)],
             fontsize=22,
         )
 
         if metric in ("VMAF", "PSNR"):
             plt.yticks([x for x in range(0, 101, 1)], fontsize=28)
-            [plt.axhline(i, color="grey", linewidth=0.5) for i in range(1, 100, 2)]
-            [plt.axhline(i, color="black", linewidth=1) for i in range(0, 100, 2)]
+            for i in range(1, 100, 2):
+                plt.axhline(i, color="grey", linewidth=0.5)
+            for i in range(0, 100, 2):
+                plt.axhline(i, color="black", linewidth=1)
+
         else:
-            [
+            for i in range(61, 1000, 2):
                 plt.axhline(i / 100, color="grey", linewidth=0.5)
-                for i in range(61, 1000, 2)
-            ]
-            [
+            for i in range(62, 1000, 2):
                 plt.axhline(i / 100, color="black", linewidth=1)
-                for i in range(62, 1000, 2)
-            ]
             plt.yticks([x / 100 for x in range(0, 1000, 1)], fontsize=28)
 
-        [plt.axvline(i, color="grey", linewidth=0.3) for i in range(0, 40000, 500)]
+        for i in range(0, 40000, 500):
+            plt.axvline(i, color="grey", linewidth=0.3)
+
         plt.ylabel(metric.capitalize(), size=32)
         plt.xlabel("Bit rate, Kbps", size=24)
         plt.title(f"{' vs '.join(codecs)}, latest git 10.12.2020 {metric}", size=28)
         plt.legend(prop={"size": 19}, loc="lower right")
 
         # if metric in ('VMAF', 'PSNR'):
-        low_ylim = [x[place] for x in data]
+        low_ylim = [
+            [y[metric] for x, y in aom.items()] + [y[metric] for x, y in x265.items()]
+        ]
         low_ylim = np.percentile(sorted(low_ylim), 10)
 
-        bitrates = [x[4] for x in data]
         plt.xlim(int(np.percentile(bitrates, 10)), int(np.percentile(bitrates, 85)))
 
         if metric in ("VMAF"):
             high_ylim = 100
         elif metric in ("SSIM"):
-            high_ylim = np.percentile(sorted([x[place] for x in data]), 90)
+            high_ylim = [y[metric] for x, y in aom.items()] + [
+                y[metric] for x, y in x265.items()
+            ]
+            high_ylim = np.percentile(high_ylim, 90)
         elif metric in ("PSNR"):
-            high_ylim = np.percentile(sorted([x[place] for x in data]), 90)
+            high_ylim = [y[metric] for x, y in aom.items()] + [
+                y[metric] for x, y in x265.items()
+            ]
+            high_ylim = np.percentile(high_ylim, 90)
 
         plt.ylim((low_ylim, high_ylim))
         plt.margins(0)
+
+        plot_range(aom, metric, "aom")
+        plot_range(x265, metric, "x265")
+
         plt.subplots_adjust(left=0.045, right=0.99, top=0.965, bottom=0.065)
+
         plt.show()
 
 
