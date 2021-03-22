@@ -237,18 +237,18 @@ def calculate_metrics(source: Path, probe: Path):
         "-loglevel",
         "error",
         "-r",
-        "24",
+        "60",
         "-i",
         source.as_posix(),
         "-r",
-        "24",
+        "60",
         "-i",
         probe,
         "-filter_complex",
         f"[0:v]setpts=PTS-STARTPTS[reference];\
           [1:v]setpts=PTS-STARTPTS[distorted];\
           [distorted][reference]\
-          libvmaf=psnr=1:ssim=1:ms_ssim=1:log_path={fl.as_posix()}:log_fmt=json",
+          libvmaf=psnr=1:ssim=1:ms_ssim=0:log_path={fl.as_posix()}:log_fmt=json",
         "-f",
         "null",
         "-",
