@@ -22,14 +22,16 @@ Calculates BSQ-rate and BD-rate
 `./pymark.py -i shrek.y4m  -r x265 aom ` `data.json` will be generated with results
 
 #### Print metrics
-`./pymark.py -i data.json -f process --rate BD BSQ ` will print
+`./pymark.py -i data.json -f process -m VMAF PSNR -r BD BSQ ` will print rates for BD and BSQ, for VMAF and PSNR 
 ```
 VMAF BD rate: -66.2935
-VMAF BSQ rate: 2.82
+VMAF BSQ rate: 0.355
 PSNR BD rate: -66.9217
-PSNR BSQ rate: 2.854
+PSNR BSQ rate: 0.35
 ```
 
+#### Plots
+adding `-p` will make plot for each processed metric
 
 # Requirements
 `ffmpeg`
