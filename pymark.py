@@ -55,7 +55,7 @@ def bsq_rate(
     area2 = round(trapz(f2(xnew2), dx=5), 3)
 
     # bsq_rate
-    bsqrate = round(area1 / area2, 3)
+    bsqrate = round(area2 / area1, 3)
 
     return bsqrate
 
