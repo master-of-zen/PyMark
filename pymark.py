@@ -271,15 +271,18 @@ def benchmark(source: Path, encoder: list):
 
 
 def get_bd_rate(data, metric):
-    """Assuming aom/x265 codecs"""
+    """
+    Assuming aom/x265 codecs
+    From x265 -> aom
+    """
     aom = data["aom"]
     x265 = data["x265"]
 
-    scores1 = sorted([y[f"{metric}"] for x, y in aom.items()])
-    scores2 = sorted([y[f"{metric}"] for x, y in x265.items()])
+    scores1 = sorted([y[f"{metric}"] for x, y in x265.items()])
+    scores2 = sorted([y[f"{metric}"] for x, y in aom.items()])
 
-    rate1 = sorted([y["BITRATE"] for x, y in aom.items()])
-    rate2 = sorted([y["BITRATE"] for x, y in x265.items()])
+    rate1 = sorted([y["BITRATE"] for x, y in x265.items()])
+    rate2 = sorted([y["BITRATE"] for x, y in aom.items()])
 
     return bdrate(rate1, scores1, rate2, scores2)
 
@@ -319,7 +322,6 @@ def plot(data: Dict, metrics):
         bitrates = [int(y["BITRATE"]) for x, y in aom.items()] + [
             int(y["BITRATE"]) for x, y in x265.items()
         ]
-        print(bitrates)
         max_bitrate = max(bitrates)
 
         plt.xticks(
@@ -356,7 +358,7 @@ def plot(data: Dict, metrics):
         ]
         low_ylim = np.percentile(sorted(low_ylim), 10)
 
-        plt.xlim(int(np.percentile(bitrates, 10)), int(np.percentile(bitrates, 85)))
+        plt.xlim(min(bitrates), max(bitrates))
 
         if metric in ("VMAF"):
             high_ylim = 100
