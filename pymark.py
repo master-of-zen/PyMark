@@ -403,6 +403,7 @@ if __name__ == "__main__":
     )
     main_group.add_argument("--input", "-i", nargs="+", required=True, type=Path)
     main_group.add_argument("--encoder", "-e", nargs="+", type=str)
+    main_group.add_argument("--metric", "-m", nargs="+", type=str)
 
     parsed = vars(parser.parse_args())
     if not parsed["input"]:
@@ -424,9 +425,18 @@ if __name__ == "__main__":
         benchmark(parsed["input"][0], enc)
 
     elif "plot" in parsed["function"]:
-        data = Path(parsed["input"])
+        data = Path(parsed["input"][0])
 
         if not data.exists():
             print("No input file/Can't reach")
             print(Path(parsed["input"][0]))
             sys.exit()
+
+        if not parsed["metric"][0]:
+            metrics = ("VMAF", "PSNR", "SSIM", "MS-SSIM")
+        else:
+            metrics = tuple(parsed["metric"])
+
+        with open(parsed["input"][0]) as f:
+            data = json.load(f)
+            data_processing(data, metrics)
