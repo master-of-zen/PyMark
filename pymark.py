@@ -32,39 +32,34 @@ def bsq_rate(
     rate2,
     scores2,
 ):
-    """Calculates BSQ-rate"""
-    color = colors.pop(0)
+    """
+    Calculates BSQ-rate
+    Based on this paper
+    https://www.researchgate.net/publication/340060891_BSQ-rate_a_new_approach_for_video-codec_performance_comparison_and_drawbacks_of_current_solutions
+    """
+
     # x bounds
     x_min = max(min(scores1), min(scores2))
     x_max = min(max(scores1), max(scores2))
 
-    # y bounds
-
     dif = int(x_max - x_min)
 
-    # First
-    set_plt_fluff()
-    f = interpolate.interp1d(scores1, rate1, kind="linear")
-    xnew = np.linspace(x_min, x_max, dif)
-    plt.plot(
-        xnew,
-        f(xnew),
-        linewidth=3,
-        color=color,
-    )
+    f1 = interpolate.interp1d(scores1, rate1, kind="linear")
+    f2 = interpolate.interp1d(scores2, rate2, kind="linear")
 
-    # Second
-    color = colors.pop(0)
-    f = interpolate.interp1d(scores2, rate2, kind="linear")
-    xnew = np.linspace(x_min, x_max, dif)
-    plt.plot(
-        xnew,
-        f(xnew),
-        linewidth=3,
-        color=color,
-    )
+    xnew1 = np.linspace(x_min, x_max, dif)
+    xnew2 = np.linspace(x_min, x_max, dif)
 
-    plt.show()
+    area1 = round(trapz(f1(xnew1), dx=5), 3)
+    print("area 1 = ", area1)
+
+    area2 = round(trapz(f2(xnew2), dx=5), 3)
+    print("area 2 = ", area2)
+
+    # bsq_rate
+    bsqrate = round(area1 / area2, 3)
+
+    return bsqrate
 
 
 def get_bsq_rate(data, metric):
@@ -367,7 +362,7 @@ def plot_range(data, metric, encoder):
     xmin = int(math.ceil(min(x)))
     xmax = int(max(x))
     dif = int(max(x) - min(x))
-    f = interpolate.interp1d(x, y, kind="slinear")
+    f = interpolate.interp1d(x, y, kind="linear")
     xnew = np.linspace(xmin, xmax, dif)
     plt.plot(
         xnew,
@@ -378,19 +373,93 @@ def plot_range(data, metric, encoder):
     )
 
 
-def data_processing(data, metrics, rates):
+def data_processing(data, metrics, rates, plotting):
 
     for metric in metrics:
         if "BD" in rates:
             bd = get_bd_rate(data, metric)
+            if plotting:
+                plot_bd(data, metrics)
             print(f"{metric} BD rate:", bd)
         if "BSQ" in rates:
             bdq = get_bsq_rate(data, metric)
-            print(f"{metric} BSQ rate:", bd)
-    # plot(data, metrics)
+            print(f"{metric} BSQ rate:", bdq)
+            if plotting:
+                plot_bsq(data, metrics)
 
 
-def plot(data: Dict, metrics):
+def plot_bsq(data, metrics):
+    color = colors.pop(0)
+    codecs = ["aom", "x265"]
+    aom = data["aom"]
+    x265 = data["x265"]
+
+    for metric in metrics:
+        scores1 = sorted([y[f"{metric}"] for x, y in x265.items()])
+        scores2 = sorted([y[f"{metric}"] for x, y in aom.items()])
+
+        rate1 = sorted([y["BITRATE"] for x, y in x265.items()])
+        rate2 = sorted([y["BITRATE"] for x, y in aom.items()])
+        # x bounds
+        x_min = max(min(scores1), min(scores2))
+        x_max = min(max(scores1), max(scores2))
+
+        # min y
+        max_bitrate = int(max(rate1 + rate2))
+
+        plt.yticks(
+            [x for x in range(0, max_bitrate + 100, 100)],
+            [int(x) for x in range(0, max_bitrate + 100, 100)],
+            fontsize=22,
+        )
+        if metric in ("VMAF", "PSNR"):
+            plt.xticks([x for x in range(0, 101, 1)], fontsize=28)
+            for i in range(1, 100, 2):
+                plt.axvline(i, color="grey", linewidth=0.5)
+            for i in range(0, 100, 2):
+                plt.axvline(i, color="black", linewidth=1)
+
+        else:
+            for i in range(61, 1000, 2):
+                plt.axvline(i / 100, color="grey", linewidth=0.5)
+            for i in range(62, 1000, 2):
+                plt.axvline(i / 100, color="black", linewidth=1)
+            plt.xticks([x / 100 for x in range(0, 1000, 1)], fontsize=28)
+
+        for i in range(0, 40000, 500):
+            plt.axvline(i, color="grey", linewidth=0.3)
+
+        plt.xlabel(metric.capitalize(), size=32)
+        plt.ylabel("Bit rate, Kbps", size=24)
+        plt.title(f"{' vs '.join(codecs)}, {metric}", size=28)
+        plt.legend(prop={"size": 19}, loc="lower right")
+
+        dif = int(x_max - x_min)
+        # First
+        set_plt_fluff()
+        f = interpolate.interp1d(scores1, rate1, kind="linear")
+        xnew = np.linspace(x_min, x_max, dif)
+        plt.plot(
+            xnew,
+            f(xnew),
+            linewidth=3,
+            color=color,
+        )
+        # Second
+        color = colors.pop(0)
+        f = interpolate.interp1d(scores2, rate2, kind="linear")
+        xnew = np.linspace(x_min, x_max, dif)
+
+        plt.plot(
+            xnew,
+            f(xnew),
+            linewidth=3,
+            color=color,
+        )
+        plt.show()
+
+
+def plot_bd(data: Dict, metrics):
     codecs = ["aom", "x265"]
     aom = data["aom"]
     x265 = data["x265"]
@@ -474,6 +543,7 @@ if __name__ == "__main__":
     main_group.add_argument("--encoder", "-e", nargs="+", type=str)
     main_group.add_argument("--metric", "-m", nargs="+", type=str)
     main_group.add_argument("--rates", "-r", nargs="+", type=str)
+    main_group.add_argument("--plot", "-p", action="store_true")
 
     parsed = vars(parser.parse_args())
     if not parsed["input"]:
@@ -495,6 +565,9 @@ if __name__ == "__main__":
         benchmark(parsed["input"][0], enc)
 
     elif "plot" in parsed["function"]:
+
+        plotting = parsed["plot"]
+
         data = Path(parsed["input"][0])
 
         if not data.exists():
@@ -511,4 +584,4 @@ if __name__ == "__main__":
 
         with open(parsed["input"][0]) as f:
             data = json.load(f)
-            data_processing(data, metrics, rates)
+            data_processing(data, metrics, rates, plotting)
