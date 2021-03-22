@@ -389,12 +389,14 @@ def data_processing(data, metrics, rates, plotting):
 
 
 def plot_bsq(data, metrics):
-    color = colors.pop(0)
+
     codecs = ["aom", "x265"]
     aom = data["aom"]
     x265 = data["x265"]
 
     for metric in metrics:
+        set_plt_fluff()
+
         scores1 = sorted([y[f"{metric}"] for x, y in x265.items()])
         scores2 = sorted([y[f"{metric}"] for x, y in aom.items()])
 
@@ -406,6 +408,12 @@ def plot_bsq(data, metrics):
 
         # min y
         max_bitrate = int(max(rate1 + rate2))
+        min_bitrate = int(min(rate1 + rate2))
+
+        min_rate = int(math.ceil(min_bitrate / 100.0)) * 100
+        max_bitrate = int(math.ceil(max_bitrate / 100.0)) * 100
+        for x in range(min_rate, max_bitrate, 100):
+            plt.axhline(x, color="grey", linewidth=0.5)
 
         plt.yticks(
             [x for x in range(0, max_bitrate + 100, 100)],
@@ -426,9 +434,9 @@ def plot_bsq(data, metrics):
                 plt.axvline(i / 100, color="black", linewidth=1)
             plt.xticks([x / 100 for x in range(0, 1000, 1)], fontsize=28)
 
-        for i in range(0, 40000, 500):
+        for i in range(0, int(x_max), 500):
             plt.axvline(i, color="grey", linewidth=0.3)
-
+        plt.xlim(x_min, x_max)
         plt.xlabel(metric.capitalize(), size=32)
         plt.ylabel("Bit rate, Kbps", size=24)
         plt.title(f"{' vs '.join(codecs)}, {metric}", size=28)
@@ -436,7 +444,8 @@ def plot_bsq(data, metrics):
 
         dif = int(x_max - x_min)
         # First
-        set_plt_fluff()
+        color = colors.pop(0)
+
         f = interpolate.interp1d(scores1, rate1, kind="linear")
         xnew = np.linspace(x_min, x_max, dif)
         plt.plot(
