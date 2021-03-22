@@ -5,8 +5,8 @@ import math
 import numpy as np
 import argparse
 import re
-import matplotlib
-from matplotlib import plt
+from matplotlib import pyplot as plt
+from scipy import interpolate
 from pathlib import Path
 import subprocess
 from subprocess import PIPE, STDOUT
@@ -15,55 +15,24 @@ from collections import deque
 import json
 
 
-def bdsnr(metric_set1, metric_set2):
-    rate1 = [x[0] for x in metric_set1]
-    psnr1 = [x[1] for x in metric_set1]
-    rate2 = [x[0] for x in metric_set2]
-    psnr2 = [x[1] for x in metric_set2]
-
+def bdrate(
+    rate1,
+    scores1,
+    rate2,
+    scores2,
+):
+    """Calculates bd rate"""
     log_rate1 = list(map(math.log, rate1))
     log_rate2 = list(map(math.log, rate2))
 
     # Best cubic poly fit for graph represented by log_ratex, psrn_x.
-    poly1 = np.polyfit(log_rate1, psnr1, 3)
-    poly2 = np.polyfit(log_rate2, psnr2, 3)
+    poly1 = np.polyfit(scores1, log_rate1, 2)
+    poly2 = np.polyfit(scores2, log_rate2, 2)
 
     # Integration interval.
-    min_int = max([min(log_rate1), min(log_rate2)])
-    max_int = min([max(log_rate1), max(log_rate2)])
-
-    # Integrate poly1, and poly2.
-    p_int1 = np.polyint(poly1)
-    p_int2 = np.polyint(poly2)
-
-    # Calculate the integrated value over the interval we care about.
-    int1 = np.polyval(p_int1, max_int) - np.polyval(p_int1, min_int)
-    int2 = np.polyval(p_int2, max_int) - np.polyval(p_int2, min_int)
-
-    # Calculate the average improvement.
-    if max_int != min_int:
-        avg_diff = (int2 - int1) / (max_int - min_int)
-    else:
-        avg_diff = 0.0
-    return avg_diff
-
-
-def bdrate(metric_set1, metric_set2):
-    rate1 = [x[0] for x in metric_set1]
-    psnr1 = [x[1] for x in metric_set1]
-    rate2 = [x[0] for x in metric_set2]
-    psnr2 = [x[1] for x in metric_set2]
-
-    log_rate1 = list(map(math.log, rate1))
-    log_rate2 = list(map(math.log, rate2))
-
-    # Best cubic poly fit for graph represented by log_ratex, psrn_x.
-    poly1 = np.polyfit(psnr1, log_rate1, 2)
-    poly2 = np.polyfit(psnr2, log_rate2, 2)
-
-    # Integration interval.
-    min_int = max([min(psnr1), min(psnr2)])
-    max_int = min([max(psnr1), max(psnr2)])
+    min_int, max_int = max([min(scores1), min(scores2)]), min(
+        [max(scores1), max(scores2)]
+    )
 
     # find integral
     p_int1 = np.polyint(poly1)
