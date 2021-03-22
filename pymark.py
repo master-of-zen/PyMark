@@ -14,6 +14,12 @@ from typing import List, Dict
 from collections import deque
 import json
 
+colors = ["b", "g", "r", "c", "m", "y"]
+
+
+def bsq_rate():
+    pass
+
 
 def bdrate(
     rate1,
@@ -53,7 +59,7 @@ def bdrate(
     # Convert to a percentage.
     avg_diff = (math.exp(avg_exp_diff) - 1) * 100
 
-    return avg_diff
+    return round(avg_diff, 4)
 
 
 def run_encode(pipe):
@@ -297,9 +303,15 @@ def plot_range(data, metric, encoder):
     xmin = int(math.ceil(min(x)))
     xmax = int(max(x))
     dif = int(max(x) - min(x))
-    f = interpolate.interp1d(x, y, kind="linear")
+    f = interpolate.interp1d(x, y, kind="slinear")
     xnew = np.linspace(xmin, xmax, dif)
-    plt.plot(xnew, f(xnew), label=f"{encoder}", linewidth=3)
+    plt.plot(
+        xnew,
+        f(xnew),
+        label=f"{encoder}",
+        linewidth=3,
+    )
+    plt.plot(x, y, marker=".", markersize=15)
 
 
 def data_processing(data, metrics):
@@ -349,7 +361,7 @@ def plot(data: Dict, metrics):
 
         plt.ylabel(metric.capitalize(), size=32)
         plt.xlabel("Bit rate, Kbps", size=24)
-        plt.title(f"{' vs '.join(codecs)}, latest git 10.12.2020 {metric}", size=28)
+        plt.title(f"{' vs '.join(codecs)}, {metric}", size=28)
         plt.legend(prop={"size": 19}, loc="lower right")
 
         # if metric in ('VMAF', 'PSNR'):
