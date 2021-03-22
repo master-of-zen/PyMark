@@ -288,11 +288,8 @@ def plot_range(data, metric, encoder):
     scores = sorted([y[f"{metric}"] for x, y in data.items()])
     rate = sorted([y["BITRATE"] for x, y in data.items()])
 
-    print(scores)
-    print(rate)
-
-    x = sorted(scores)
-    y = sorted(rate)
+    x = sorted(rate)
+    y = sorted(scores)
 
     xmin = int(math.ceil(min(x)))
     xmax = int(max(x))
@@ -300,7 +297,6 @@ def plot_range(data, metric, encoder):
     f = interpolate.interp1d(x, y, kind="linear")
     xnew = np.linspace(xmin, xmax, dif)
     plt.plot(xnew, f(xnew), label=f"{encoder}", linewidth=3)
-    print("we are here")
 
 
 def data_processing(data, metrics):
