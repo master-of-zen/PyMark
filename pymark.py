@@ -51,6 +51,7 @@ def bsq_rate(
     xnew2 = np.linspace(x_min, x_max, dif)
 
     area1 = round(trapz(f1(xnew1), dx=5), 3)
+
     area2 = round(trapz(f2(xnew2), dx=5), 3)
 
     # bsq_rate
@@ -570,9 +571,9 @@ if __name__ == "__main__":
 
         benchmark(parsed["input"][0], enc)
 
-    elif "plot" in parsed["function"]:
+    elif "process" in parsed["function"]:
 
-        plotting = parsed["plot"]
+        plot = parsed["plot"]
 
         data = Path(parsed["input"][0])
 
@@ -590,4 +591,4 @@ if __name__ == "__main__":
 
         with open(parsed["input"][0]) as f:
             data = json.load(f)
-            data_processing(data, metrics, rates, plotting)
+            data_processing(data, metrics, rates, plot)
