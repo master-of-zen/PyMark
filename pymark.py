@@ -13,12 +13,69 @@ from subprocess import PIPE, STDOUT
 from typing import List, Dict
 from collections import deque
 import json
+from scipy.integrate import simps
+from numpy import trapz
 
 colors = ["b", "r", "g", "c", "m", "y"]
 
 
-def bsq_rate():
-    pass
+def bsq_rate(
+    rate1,
+    scores1,
+    rate2,
+    scores2,
+):
+    """Calculates BSQ-rate"""
+    color = colors.pop(0)
+    # x bounds
+    x_min = max(min(scores1), min(scores2))
+    x_max = min(max(scores1), max(scores2))
+
+    # y bounds
+
+    dif = int(x_max - x_min)
+
+    # First
+    plt.figure(figsize=(42, 24), dpi=80, facecolor="w", edgecolor="k")
+    plt.tight_layout()
+    f = interpolate.interp1d(scores1, rate1, kind="linear")
+    xnew = np.linspace(x_min, x_max, dif)
+    plt.plot(
+        xnew,
+        f(xnew),
+        linewidth=3,
+        color=color,
+    )
+
+    # Second
+    color = colors.pop(0)
+    f = interpolate.interp1d(scores2, rate2, kind="linear")
+    xnew = np.linspace(x_min, x_max, dif)
+    plt.plot(
+        xnew,
+        f(xnew),
+        linewidth=3,
+        color=color,
+    )
+    plt.subplots_adjust(left=0.045, right=0.99, top=0.965, bottom=0.065)
+    plt.show()
+
+
+def get_bsq_rate(data, metric):
+    """
+    Assuming aom/x265 codecs
+    From x265 -> aom
+    """
+    aom = data["aom"]
+    x265 = data["x265"]
+
+    scores1 = sorted([y[f"{metric}"] for x, y in x265.items()])
+    scores2 = sorted([y[f"{metric}"] for x, y in aom.items()])
+
+    rate1 = sorted([y["BITRATE"] for x, y in x265.items()])
+    rate2 = sorted([y["BITRATE"] for x, y in aom.items()])
+
+    return bsq_rate(rate1, scores1, rate2, scores2)
 
 
 def bdrate(
@@ -306,16 +363,25 @@ def plot_range(data, metric, encoder):
     dif = int(max(x) - min(x))
     f = interpolate.interp1d(x, y, kind="slinear")
     xnew = np.linspace(xmin, xmax, dif)
-    plt.plot(xnew, f(xnew), label=f"{encoder}", linewidth=3, color=color)
-    plt.plot(x, y, marker=".", markersize=15, color=color)
+    plt.plot(
+        xnew,
+        f(xnew),
+        label=f"{encoder}",
+        linewidth=3,
+        color=color,
+    )
 
 
-def data_processing(data, metrics):
+def data_processing(data, metrics, rates):
+
     for metric in metrics:
-        bd = get_bd_rate(data, metric)
-        print(f"{metric} BD rate:", bd)
-
-    plot(data, metrics)
+        if "BD" in rates:
+            bd = get_bd_rate(data, metric)
+            print(f"{metric} BD rate:", bd)
+        if "BSQ" in rates:
+            bdq = get_bsq_rate(data, metric)
+            print(f"{metric} BSQ rate:", bd)
+    # plot(data, metrics)
 
 
 def plot(data: Dict, metrics):
@@ -337,7 +403,6 @@ def plot(data: Dict, metrics):
             [int(x) for x in range(0, max_bitrate + 100, 100)],
             fontsize=22,
         )
-
         if metric in ("VMAF", "PSNR"):
             plt.yticks([x for x in range(0, 101, 1)], fontsize=28)
             for i in range(1, 100, 2):
@@ -364,7 +429,6 @@ def plot(data: Dict, metrics):
         low_ylim = [
             [y[metric] for x, y in aom.items()] + [y[metric] for x, y in x265.items()]
         ]
-        low_ylim = np.percentile(sorted(low_ylim), 10)
 
         plt.xlim(min(bitrates), max(bitrates))
 
@@ -407,6 +471,7 @@ if __name__ == "__main__":
     main_group.add_argument("--input", "-i", nargs="+", required=True, type=Path)
     main_group.add_argument("--encoder", "-e", nargs="+", type=str)
     main_group.add_argument("--metric", "-m", nargs="+", type=str)
+    main_group.add_argument("--rates", "-r", nargs="+", type=str)
 
     parsed = vars(parser.parse_args())
     if not parsed["input"]:
@@ -435,11 +500,13 @@ if __name__ == "__main__":
             print(Path(parsed["input"][0]))
             sys.exit()
 
-        if not parsed["metric"][0]:
-            metrics = ("VMAF", "PSNR", "SSIM", "MS-SSIM")
-        else:
-            metrics = tuple(parsed["metric"])
+        metrics = (
+            ["VMAF", "PSNR", "SSIM", "MS-SSIM"]
+            if not parsed["metric"]
+            else tuple(parsed["metric"])
+        )
+        rates = ["BD", "BSQ"] if not parsed["rates"] else parsed["rates"]
 
         with open(parsed["input"][0]) as f:
             data = json.load(f)
-            data_processing(data, metrics)
+            data_processing(data, metrics, rates)
