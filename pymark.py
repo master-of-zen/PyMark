@@ -511,9 +511,9 @@ def plot_bd(data: Dict, metrics):
         plt.legend(prop={"size": 19}, loc="lower right")
 
         # if metric in ('VMAF', 'PSNR'):
-        low_ylim = [
+        low_ylim = min(
             [y[metric] for x, y in aom.items()] + [y[metric] for x, y in x265.items()]
-        ]
+        )
 
         plt.xlim(min(bitrates), max(bitrates))
 
