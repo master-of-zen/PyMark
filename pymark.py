@@ -18,6 +18,9 @@ from numpy import trapz
 
 colors = ["b", "r", "g", "c", "m", "y"]
 
+# TODO: 2 pass aomenc
+# TODO: add VVC
+
 
 def set_plt_fluff():
     plt.figure(figsize=(42, 24), dpi=80, facecolor="w", edgecolor="k")
@@ -138,7 +141,8 @@ def run_encode(pipe):
     if pipe.returncode != 0 and pipe.returncode != -2:
         tb = sys.exc_info()[2]
         print("\n".join(encoder_history))
-        raise RuntimeError("Error in processing encoding pipe").with_traceback(tb)
+        raise RuntimeError(
+            "Error in processing encoding pipe").with_traceback(tb)
 
 
 def read_json_file(pth: Path) -> Dict:
@@ -512,7 +516,8 @@ def plot_bd(data: Dict, metrics):
 
         # if metric in ('VMAF', 'PSNR'):
         low_ylim = min(
-            [y[metric] for x, y in aom.items()] + [y[metric] for x, y in x265.items()]
+            [y[metric] for x, y in aom.items()] + [y[metric]
+                                                   for x, y in x265.items()]
         )
 
         plt.xlim(min(bitrates), max(bitrates))
@@ -542,7 +547,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     main_group = parser.add_argument_group("Functions")
-    main_group.add_argument("--input", "-i", nargs="+", required=True, type=Path)
+    main_group.add_argument("--input", "-i", nargs="+",
+                            required=True, type=Path)
     main_group.add_argument("--encoder", "-e", nargs="+", type=str)
     main_group.add_argument("--metric", "-m", nargs="+", type=str)
     main_group.add_argument("--rates", "-r", nargs="+", type=str)
