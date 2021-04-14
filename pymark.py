@@ -18,6 +18,8 @@ from numpy import trapz
 
 colors = ["b", "r", "g", "c", "m", "y"]
 
+# Rewrite in rust? test test
+
 
 def set_plt_fluff():
     plt.figure(figsize=(42, 24), dpi=80, facecolor="w", edgecolor="k")
