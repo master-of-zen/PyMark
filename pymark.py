@@ -18,9 +18,6 @@ from numpy import trapz
 
 colors = ["b", "r", "g", "c", "m", "y"]
 
-# TODO: 2 pass aomenc
-# TODO: add VVC
-
 
 def set_plt_fluff():
     plt.figure(figsize=(42, 24), dpi=80, facecolor="w", edgecolor="k")
